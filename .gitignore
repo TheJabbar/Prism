@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+*.egg
+dist/
+build/
+*.whl
+*.egg-info/
+
+# Environment
+.env
+
+# Database
+*.db
+
+# Logs
+*.log
+
+# Exports
+exports/
+!exports/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# IDX API subproject (separate repo)
+idx-api/
+
+# Temp
+tmp/
+temp/
+*.tmp

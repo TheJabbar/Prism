@@ -1,0 +1,42 @@
+version: "3.9"
+
+services:
+  prism:
+    build: .
+    container_name: prism-terminal
+    ports:
+      - "8000:8000"
+    volumes:
+      - db_data:/app/data
+      - ./logs:/app/logs
+      - ./exports:/app/exports
+      - ./.env:/app/.env:ro
+    environment:
+      - TZ=Asia/Jakarta
+    env_file:
+      - .env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # Optional: PostgreSQL for production mode
+  # db:
+  #   image: postgres:16-alpine
+  #   container_name: prism-db
+  #   environment:
+  #     POSTGRES_DB: prism
+  #     POSTGRES_USER: prism
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-prism_secret}
+  #   volumes:
+  #     - pgdata:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U prism"]
+  #     interval: 10s
+
+volumes:
+  db_data:
+  pgdata:
