@@ -132,10 +132,22 @@ function createSparkline(canvasId, data, color) {
 }
 
 // === Market Monitor ===
+const FORMATTERS = {
+    number: (v) => v.toLocaleString('id-ID', { maximumFractionDigits: 0 }),
+    decimal: (v) => v.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+    pct: (v) => v.toFixed(2) + '%',
+    'pct-1dp': (v) => v.toFixed(1) + '%',
+    'currency-idr': (v) => 'Rp' + v.toLocaleString('id-ID', { maximumFractionDigits: 0 }),
+    'currency-usd': (v) => '$' + v.toFixed(2),
+    bps: (v) => v.toFixed(0) + ' bps',
+};
+
 function makePopupChart(el) {
     let hist;
     try { hist = JSON.parse(el.dataset.history); } catch(ex) { return; }
     if (!hist || hist.length < 2) return;
+
+    const fmt = FORMATTERS[el.dataset.fmt] || FORMATTERS.number;
 
     const rect = el.getBoundingClientRect();
     const popup = document.createElement('div');
@@ -151,8 +163,6 @@ function makePopupChart(el) {
     popup.style.left = left + 'px';
     popup.style.top = top + 'px';
 
-    const isRate = hist[hist.length-1].value > 1;
-    const fmt = isRate ? (v) => v.toFixed(2) + '%' : (v) => v.toFixed(1);
     const ctx = cvs.getContext('2d');
 
     const chart = new Chart(ctx, {
@@ -185,6 +195,28 @@ function makePopupChart(el) {
     });
 
     return { popup, chart };
+}
+
+function fmtForMarket(key) {
+    const map = {
+        ihsg: 'number', lq45: 'number',
+        usdidr: 'currency-idr', dxy: 'decimal',
+        brent: 'currency-usd', gold: 'currency-usd',
+        cpo: 'number',
+    };
+    return map[key] || 'decimal';
+}
+
+function fmtForIndicator(unit, name) {
+    if (!unit) return 'decimal';
+    if (unit === '%') {
+        if (name && (name.includes('BI') || name.includes('Rate') || name.includes('Deposit') || name.includes('Lending') || name.includes('Inflation') || name.includes('GDP') || name.includes('Growth'))) return 'pct';
+        return 'pct-1dp';
+    }
+    if (unit.includes('bps')) return 'bps';
+    if (unit.includes('trillion') || unit.includes('IDR')) return 'currency-idr';
+    if (unit.includes('USD')) return 'currency-usd';
+    return 'decimal';
 }
 
 function escAttr(s) {
@@ -222,8 +254,9 @@ async function loadMarket() {
             ${Object.entries(data).filter(([k]) => k !== 'updated_at' && k !== 'status').map(([key, val]) => {
                 const hasHistory = val.history && val.history.length > 1;
                 const histJson = hasHistory ? escAttr(JSON.stringify(val.history)) : '';
+                const fmt = fmtForMarket(key);
                 return `
-                    <div class="indicator-item${hasHistory ? ' clickable' : ''}" data-history='${histJson}'>
+                    <div class="indicator-item${hasHistory ? ' clickable' : ''}" data-history='${histJson}' data-fmt="${fmt}">
                         <div class="ind-name">${key.toUpperCase()}</div>
                         <div class="ind-value">${typeof val === 'object' ? val.last.toLocaleString() : val}</div>
                         <div class="ind-change ${typeof val === 'object' && val.change_pct >= 0 ? 'up' : 'down'}">
@@ -391,8 +424,9 @@ async function loadIndicators() {
                     ${indicators.map(i => {
                         const hasHistory = i.history && i.history.length > 1;
                         const histJson = hasHistory ? esc(JSON.stringify(i.history)) : '';
+                        const fmt = fmtForIndicator(i.unit, i.name);
                         return `
-                            <div class="indicator-item${hasHistory ? ' clickable' : ''}" data-history='${histJson}'>
+                            <div class="indicator-item${hasHistory ? ' clickable' : ''}" data-history='${histJson}' data-fmt="${fmt}">
                                 <div class="ind-name">${i.name}</div>
                                 <div class="ind-value">${i.value} ${i.unit || ''}</div>
                                 <div class="ind-change ${i.change > 0 ? 'up' : i.change < 0 ? 'down' : ''}">
